@@ -50,7 +50,7 @@ const HeroSection = () => {
         <div className="hero-actions">
           <a
             className="hero-button hero-button-primary"
-            href={home?.button_link || "/products"}
+            href={home?.button_link || "/#products"}
           >
             {home?.button_text || "Explore Our Products"}
             <span aria-hidden="true"> →</span>
@@ -58,7 +58,7 @@ const HeroSection = () => {
 
           <a
             className="hero-button hero-button-secondary"
-            href="/contact"
+            href="/#contact"
           >
             Contact Our Team
           </a>

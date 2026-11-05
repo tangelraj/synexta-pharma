@@ -33,15 +33,15 @@ const Navbar = () => {
           className={`nav-menu${menuOpen ? " is-open" : ""}`}
         >
           <div className="nav-links">
-            <a href="/" onClick={closeMenu}>Home</a>
-            <a href="/about" onClick={closeMenu}>About Us</a>
-            <a href="/products" onClick={closeMenu}>Products</a>
-            <a href="/why-us" onClick={closeMenu}>Why choose Us</a>
-            <a href="/quality" onClick={closeMenu}>Quality Assurance</a>
-            <a href="/contact" onClick={closeMenu}>Contact</a>
+            <a href="/#home" onClick={closeMenu}>Home</a>
+            <a href="/#about" onClick={closeMenu}>About Us</a>
+            <a href="/#products" onClick={closeMenu}>Products</a>
+            <a href="/#why-us" onClick={closeMenu}>Why choose Us</a>
+            <a href="/#quality" onClick={closeMenu}>Quality Assurance</a>
+            <a href="/#contact" onClick={closeMenu}>Contact</a>
           </div>
 
-          <a href="/products" className="explore-btn" onClick={closeMenu}>
+          <a href="/#products" className="explore-btn" onClick={closeMenu}>
             Explore Products
           </a>
         </div>
