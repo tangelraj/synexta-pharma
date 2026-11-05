@@ -19,10 +19,27 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 # --------------------------------------------------
+# HELPER FUNCTIONS
+# --------------------------------------------------
+
+def get_env_list(name, default=""):
+    return [
+        item.strip()
+        for item in os.environ.get(name, default).split(",")
+        if item.strip()
+    ]
+
+
+def get_env_bool(name, default=False):
+    value = os.environ.get(name, str(default))
+    return value.strip().lower() == "true"
+
+
+# --------------------------------------------------
 # SECURITY SETTINGS
 # --------------------------------------------------
 
-DEBUG = os.environ.get("DEBUG", "False").lower() == "true"
+DEBUG = get_env_bool("DEBUG", False)
 
 SECRET_KEY = os.environ.get("SECRET_KEY")
 
@@ -34,15 +51,10 @@ if not SECRET_KEY:
             "SECRET_KEY environment variable is required."
         )
 
-
-ALLOWED_HOSTS = [
-    host.strip()
-    for host in os.environ.get(
-        "ALLOWED_HOSTS",
-        "127.0.0.1,localhost"
-    ).split(",")
-    if host.strip()
-]
+ALLOWED_HOSTS = get_env_list(
+    "ALLOWED_HOSTS",
+    "127.0.0.1,localhost"
+)
 
 
 # --------------------------------------------------
@@ -57,10 +69,10 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
 
-    # Your Django application
+    # Django API
     "api",
 
-    # React CORS support
+    # React CORS
     "corsheaders",
 ]
 
@@ -118,21 +130,20 @@ WSGI_APPLICATION = "config.wsgi.application"
 
 
 # --------------------------------------------------
-# DATABASE
+# DATABASE SETTINGS
 # --------------------------------------------------
 
-# Local: SQLite
-# Render: PostgreSQL through DATABASE_URL
+# Local development: SQLite
+# Production on Render: PostgreSQL using DATABASE_URL
 
 DATABASES = {
     "default": dj_database_url.config(
         default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
         conn_max_age=600,
         conn_health_checks=True,
-        ssl_require=bool(
-            os.environ.get("DATABASE_URL")
-            and os.environ.get("DATABASE_SSL_REQUIRE", "False").lower()
-            == "true"
+        ssl_require=(
+            bool(os.environ.get("DATABASE_URL"))
+            and get_env_bool("DATABASE_SSL_REQUIRE", False)
         ),
     )
 }
@@ -207,7 +218,7 @@ STORAGES = {
 
 
 # --------------------------------------------------
-# MEDIA FILES (IMAGE UPLOADS)
+# MEDIA FILES
 # --------------------------------------------------
 
 MEDIA_URL = "/media/"
@@ -219,22 +230,11 @@ MEDIA_ROOT = BASE_DIR / "media"
 # REACT FRONTEND CORS SETTINGS
 # --------------------------------------------------
 
-def get_env_list(name, default=""):
-    return [
-        item.strip()
-        for item in os.environ.get(name, default).split(",")
-        if item.strip()
-    ]
-
-
 CORS_ALLOWED_ORIGINS = get_env_list(
     "CORS_ALLOWED_ORIGINS",
-    "http://localhost:5173,http://127.0.0.1:5173"
+    "http://localhost:5173,"
+    "http://127.0.0.1:5173,"
     "https://synexta-pharma.vercel.app"
-)
-CORS_ALLOWED_ORIGINS = get_env_list(
-    "CORS_ALLOWED_ORIGINS",
-    "http://localhost:5173,http://127.0.0.1:5173,https://synexta-pharma.vercel.app"
 )
 
 CSRF_TRUSTED_ORIGINS = get_env_list(
@@ -243,31 +243,63 @@ CSRF_TRUSTED_ORIGINS = get_env_list(
 
 
 # --------------------------------------------------
-# GMAIL SMTP EMAIL SETTINGS
+# EMAIL SETTINGS
 # --------------------------------------------------
 
-EMAIL_BACKEND = (
+# Local development can use SMTP.
+# Production SMTP may be restricted by the hosting
+# provider. An HTTPS email API is recommended for
+# production enquiry delivery.
+
+EMAIL_BACKEND = os.environ.get(
+    "EMAIL_BACKEND",
     "django.core.mail.backends.smtp.EmailBackend"
 )
 
-EMAIL_HOST = "smtp.gmail.com"
+EMAIL_HOST = os.environ.get(
+    "EMAIL_HOST",
+    "smtp.gmail.com"
+)
 
-EMAIL_PORT = 587
+EMAIL_PORT = int(
+    os.environ.get("EMAIL_PORT", "587")
+)
 
-EMAIL_USE_TLS = True
+EMAIL_USE_TLS = get_env_bool(
+    "EMAIL_USE_TLS",
+    True
+)
 
-EMAIL_USE_SSL = False
+EMAIL_USE_SSL = get_env_bool(
+    "EMAIL_USE_SSL",
+    False
+)
 
 EMAIL_TIMEOUT = 20
 
-EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "tangelraj@gmail.com")
-
-EMAIL_HOST_PASSWORD = os.environ.get(
-    "EMAIL_HOST_PASSWORD", "pqii pljp eicb uzpm"
+EMAIL_HOST_USER = os.environ.get(
+    "EMAIL_HOST_USER",
+    ""
 )
 
-DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+EMAIL_HOST_PASSWORD = os.environ.get(
+    "EMAIL_HOST_PASSWORD",
+    ""
+)
 
+DEFAULT_FROM_EMAIL = os.environ.get(
+    "DEFAULT_FROM_EMAIL",
+    EMAIL_HOST_USER or "webmaster@localhost"
+)
+
+# Reserved for a future HTTPS email API integration.
+# This setting alone does not enable API email sending.
+RESEND_API_KEY = os.environ.get(
+    "RESEND_API_KEY",
+    ""
+)
+RESEND_FROM_EMAIL = os.environ.get("RESEND_FROM_EMAIL", "")
+ENQUIRY_TO_EMAIL = os.environ.get("ENQUIRY_TO_EMAIL", "")
 
 # --------------------------------------------------
 # PRODUCTION SECURITY
