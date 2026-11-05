@@ -1,5 +1,6 @@
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { getContact, submitEnquiry } from "../services/api";
 import "./ContactSection.css";
 
 const contactTopics = [
@@ -36,9 +37,28 @@ const contactTopics = [
 ];
 
 const ContactSection = () => {
+  const [contact, setContact] = useState(null);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState("");
   const [isSuccess, setIsSuccess] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    getContact()
+      .then((data) => {
+        if (!cancelled && data.heading) {
+          setContact(data);
+        }
+      })
+      .catch((error) => {
+        console.error("Error loading Contact data:", error);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -46,39 +66,34 @@ const ContactSection = () => {
     const form = event.currentTarget;
     const data = Object.fromEntries(new FormData(form).entries());
 
-    const name = data.name.trim();
-    const email = data.email.trim();
-    const phone = data.phone.trim();
-    const message = data.message.trim();
+    const name = (data.name || "").trim();
+    const email = (data.email || "").trim();
+    const phone = (data.phone || "").trim();
+    const message = (data.message || "").trim();
 
     setStatus("");
     setIsSuccess(false);
 
-    // Name validation
     if (name.length < 3 || !/^[A-Za-z ]+$/.test(name)) {
       setStatus("Please enter a valid name with at least 3 letters.");
       return;
     }
 
-    // Email validation
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       setStatus("Please enter a valid email address.");
       return;
     }
 
-    // Phone validation (optional field)
     if (phone && !/^[0-9]{10}$/.test(phone)) {
       setStatus("Phone number must contain exactly 10 digits.");
       return;
     }
 
-    // Enquiry type validation
     if (!data.enquiryType) {
       setStatus("Please select an enquiry type.");
       return;
     }
 
-    // Message validation
     if (message.length < 10) {
       setStatus("Message must contain at least 10 characters.");
       return;
@@ -87,35 +102,17 @@ const ContactSection = () => {
     setLoading(true);
 
     try {
-      const response = await fetch(
-        "http://127.0.0.1:8000/api/submit-enquiry/",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            ...data,
-            name,
-            email,
-            phone,
-            message,
-          }),
-        }
-      );
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          result.error || "Unable to send enquiry right now."
-        );
-      }
+      await submitEnquiry({
+        ...data,
+        name,
+        email,
+        phone,
+        message,
+      });
 
       setIsSuccess(true);
       setStatus("Your enquiry has been submitted successfully!");
       form.reset();
-
     } catch (error) {
       setIsSuccess(false);
       setStatus(
@@ -133,15 +130,16 @@ const ContactSection = () => {
       aria-labelledby="contact-title"
     >
       <div className="contact-layout">
-
-        {/* Contact Information */}
         <div className="contact-information">
           <p className="contact-eyebrow">Contact</p>
-          <h2 id="contact-title">Get in Touch</h2>
+
+          <h2 id="contact-title">
+            {contact?.heading || "Get in Touch"}
+          </h2>
 
           <p className="contact-intro">
-            Have a question about our products or a business enquiry?
-            Send us a message and our team will get back to you.
+            {contact?.description ||
+              "Have a question about our products or a business enquiry? Send us a message and our team will get back to you."}
           </p>
 
           <ul className="contact-topics">
@@ -162,18 +160,15 @@ const ContactSection = () => {
                     {topic.icon}
                   </svg>
                 </span>
+
                 <span>{topic.label}</span>
               </li>
             ))}
           </ul>
         </div>
 
-        {/* Contact Form */}
         <form className="contact-form" onSubmit={handleSubmit}>
-
           <div className="contact-field-grid">
-
-            {/* Name */}
             <label className="contact-field">
               <span>Name *</span>
               <input
@@ -188,7 +183,6 @@ const ContactSection = () => {
               />
             </label>
 
-            {/* Email */}
             <label className="contact-field">
               <span>Business email *</span>
               <input
@@ -200,7 +194,6 @@ const ContactSection = () => {
               />
             </label>
 
-            {/* Phone */}
             <label className="contact-field">
               <span>Phone number</span>
               <input
@@ -214,7 +207,6 @@ const ContactSection = () => {
               />
             </label>
 
-            {/* Company */}
             <label className="contact-field">
               <span>Company / Organization</span>
               <input
@@ -224,7 +216,6 @@ const ContactSection = () => {
               />
             </label>
 
-            {/* Enquiry Type */}
             <label className="contact-field contact-field-full">
               <span>Enquiry type *</span>
               <select
@@ -235,22 +226,23 @@ const ContactSection = () => {
                 <option value="" disabled>
                   Select an option
                 </option>
+
                 <option value="product-information">
                   Product information requests
                 </option>
+
                 <option value="business-partnership">
                   Distribution &amp; business partnerships
                 </option>
+
                 <option value="healthcare-support">
                   Healthcare professional support
                 </option>
-                <option value="other">
-                  Other
-                </option>
+
+                <option value="other">Other</option>
               </select>
             </label>
 
-            {/* Message */}
             <label className="contact-field contact-field-full">
               <span>Message *</span>
               <textarea
@@ -261,10 +253,8 @@ const ContactSection = () => {
                 required
               />
             </label>
-
           </div>
 
-          {/* Submit Button */}
           <button
             className="contact-submit"
             type="submit"
@@ -273,7 +263,6 @@ const ContactSection = () => {
             {loading ? "Sending..." : "Submit Enquiry"}
           </button>
 
-          {/* Status Message */}
           {status && (
             <p
               role="status"
@@ -287,7 +276,6 @@ const ContactSection = () => {
               {status}
             </p>
           )}
-
         </form>
       </div>
     </section>

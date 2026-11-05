@@ -1,5 +1,7 @@
-import React from "react";
+
+import React, { useEffect, useState } from "react";
 import researcherImage from "../assets/Medical researcher using laboratory microscope.png";
+import { getAbout } from "../services/api";
 import "./AboutSection.css";
 
 const features = [
@@ -37,23 +39,43 @@ const features = [
 ];
 
 const AboutSection = () => {
+  const [about, setAbout] = useState(null);
+
+  useEffect(() => {
+    getAbout()
+      .then((data) => {
+        if (data.title) {
+          setAbout(data);
+        }
+      })
+      .catch((error) => {
+        console.error("Error loading About data:", error);
+      });
+  }, []);
+
   return (
-    <section id="about" className="about-section" aria-labelledby="about-title">
+    <section
+      id="about"
+      className="about-section"
+      aria-labelledby="about-title"
+    >
       <div className="about-layout">
         <img
           className="about-image"
-          src={researcherImage}
-          alt="A pharmaceutical researcher working with a microscope in a laboratory"
+          src={about?.image || researcherImage}
+          alt="A pharmaceutical researcher working in a laboratory"
         />
 
         <div className="about-content">
           <p className="about-eyebrow">About Synexta Pharma</p>
-          <h2 id="about-title">Committed to Quality. Focused on Care.</h2>
+
+          <h2 id="about-title">
+            {about?.title || "Committed to Quality. Focused on Care."}
+          </h2>
+
           <p className="about-description">
-            Synexta Pharma offers a range of pharmaceutical formulations
-            designed to support diverse healthcare needs. Our approach is built
-            on quality, transparency and a genuine commitment to trusted
-            healthcare solutions.
+            {about?.description ||
+              "Synexta Pharma offers a range of pharmaceutical formulations designed to support diverse healthcare needs. Our approach is built on quality, transparency and a genuine commitment to trusted healthcare solutions."}
           </p>
 
           <ul className="about-features">
@@ -71,6 +93,7 @@ const AboutSection = () => {
                     {feature.icon}
                   </svg>
                 </span>
+
                 <span className="about-feature-copy">
                   <strong>{feature.title}</strong>
                   <span>{feature.description}</span>
