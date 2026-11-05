@@ -1,0 +1,157 @@
+.connect-section {
+  position: relative;
+  isolation: isolate;
+  box-sizing: border-box;
+  width: min(100% - 80px, 1180px);
+  min-height: 330px;
+  margin: 14px auto 28px;
+  display: flex;
+  align-items: center;
+  padding: 36px 6.5%;
+  overflow: hidden;
+  border-radius: 36px;
+  background: #eaf5ff;
+  color: #4a1597;
+  font-family: Arial, sans-serif;
+}
+
+.connect-section::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background-image:
+    linear-gradient(90deg, rgba(235, 247, 255, 0.26), rgba(235, 247, 255, 0.02)),
+    var(--connect-background);
+  background-position: center;
+  background-size: cover;
+  content: "";
+}
+
+.connect-content {
+  width: min(100%, 500px);
+}
+
+.connect-eyebrow {
+  margin: 0 0 12px;
+  color: #687b94;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  line-height: 1.3;
+  text-transform: uppercase;
+}
+
+.connect-content h2 {
+  margin: 0;
+  color: #4a1597;
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -1.5px;
+  line-height: 1.15;
+}
+
+.connect-description {
+  max-width: 700px;
+  margin: 14px 0 20px;
+  color: #53647b;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.connect-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+}
+
+.connect-button {
+  min-height: 40px;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 18px;
+  border: 1px solid #c9b8e4;
+  border-radius: 40px;
+  color: #4a1597;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.connect-button:hover,
+.connect-button:focus-visible {
+  transform: translateY(-2px);
+}
+
+.connect-button-primary {
+  min-width: 140px;
+  border-color: #4a1597;
+  background: #4a1597;
+  color: #fff;
+}
+
+.connect-button-primary:hover,
+.connect-button-primary:focus-visible {
+  background: #391071;
+}
+
+.connect-button-secondary {
+  min-width: 165px;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.connect-button-secondary:hover,
+.connect-button-secondary:focus-visible {
+  background: #fff;
+}
+
+@media (max-width: 760px) {
+  .connect-section {
+    width: calc(100% - 32px);
+    min-height: 0;
+    margin: 16px auto 32px;
+    padding: 34px 18px;
+    border-radius: 36px;
+    background-position: 63% center;
+  }
+
+  .connect-section::before {
+    background-image:
+      linear-gradient(90deg, rgba(235, 247, 255, 0.94), rgba(235, 247, 255, 0.68)),
+      var(--connect-background);
+  }
+
+  .connect-content h2 {
+    font-size: 24px;
+    letter-spacing: -1px;
+  }
+
+  .connect-description {
+    font-size: 13px;
+  }
+
+  .connect-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .connect-button {
+    width: 100%;
+    min-width: 0;
+    min-height: 38px;
+    font-size: 13px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .connect-button {
+    transition: none;
+  }
+}
