@@ -168,20 +168,26 @@ Message:
 # HOME API
 # --------------------------------------------------
 
+
 def home_data(request):
     home = HomeSection.objects.first()
 
     if not home:
-        return JsonResponse({"message": "No home content found"})
+        return JsonResponse(
+            {"message": "No home content found"},
+            status=404
+        )
 
     return JsonResponse({
         "title": home.title,
         "subtitle": home.subtitle,
+        "eyebrow": home.eyebrow,
         "banner_image": image_url(request, home.banner_image),
         "button_text": home.button_text,
         "button_link": home.button_link,
+        "secondary_button_text": home.secondary_button_text,
+        "secondary_button_link": home.secondary_button_link,
     })
-
 
 # --------------------------------------------------
 # ABOUT API
