@@ -35,6 +35,7 @@ const fallbackProducts = [
       { amount: "100 mg", name: "Benfotiamine" },
     ],
   },
+  
   {
     name: "PANTOSYN™ 20/40",
     category: "Gastrointestinal Health",
@@ -72,7 +73,24 @@ const fallbackProducts = [
     image: pregasynImage,
   },
 ];
+const localProductImages = {
+  "NEUROSYN-M™": neurosynImage,
+  "PANTOSYN™ 20/40": pantosynImage,
+  "TRYPSYN-R™": trypsynImage,
+  "CEFIXA™ 200": cefixaImage,
+  "BETASYN™ 8/16": betasynImage,
+  "PREGASYN™ FORTE": pregasynForteImage,
+  "PREGASYN™": pregasynImage,
+};
 
+const normalizeProduct = (product) => {
+  const name = product.name?.trim();
+
+  return {
+    ...product,
+    image: localProductImages[name] || product.image || "",
+  };
+};
 const ProductsSection = () => {
   const [products, setProducts] = useState(fallbackProducts);
   const [selectedProduct, setSelectedProduct] = useState(null);
