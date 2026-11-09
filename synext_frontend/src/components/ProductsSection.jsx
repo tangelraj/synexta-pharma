@@ -1,5 +1,5 @@
-
 import React, { useEffect, useRef, useState } from "react";
+
 import neurosynImage from "../assets/Container (7).png";
 import pantosynImage from "../assets/Container (8).png";
 import trypsynImage from "../assets/Container (9).png";
@@ -7,10 +7,11 @@ import cefixaImage from "../assets/Container (10).png";
 import betasynImage from "../assets/Container (11).png";
 import pregasynImage from "../assets/Container (12).png";
 import pregasynForteImage from "../assets/Container (13).png";
+
 import { getProducts } from "../services/api";
 import "./ProductsSection.css";
 
-// Original products are shown if the Django API cannot be reached.
+// Fallback products if Django API cannot be reached
 const fallbackProducts = [
   {
     name: "NEUROSYN-M™",
@@ -35,7 +36,6 @@ const fallbackProducts = [
       { amount: "100 mg", name: "Benfotiamine" },
     ],
   },
-  
   {
     name: "PANTOSYN™ 20/40",
     category: "Gastrointestinal Health",
@@ -45,7 +45,8 @@ const fallbackProducts = [
   {
     name: "TRYPSYN-R™",
     category: "Musculoskeletal Support",
-    description: "Bromelain 90 mg + Rutoside Trihydrate 100 mg + Trypsin 48 mg",
+    description:
+      "Bromelain 90 mg + Rutoside Trihydrate 100 mg + Trypsin 48 mg",
     image: trypsynImage,
   },
   {
@@ -73,55 +74,126 @@ const fallbackProducts = [
     image: pregasynImage,
   },
 ];
+
+// Match Django product names to local images
 const localProductImages = {
-  "NEUROSYN-M™": neurosynImage,
-  "PANTOSYN™ 20/40": pantosynImage,
-  "TRYPSYN-R™": trypsynImage,
-  "CEFIXA™ 200": cefixaImage,
-  "BETASYN™ 8/16": betasynImage,
-  "PREGASYN™ FORTE": pregasynForteImage,
-  "PREGASYN™": pregasynImage,
+  neurosyn: neurosynImage,
+  pantosyn: pantosynImage,
+  trypsyn: trypsynImage,
+  cefixa: cefixaImage,
+  betasyn: betasynImage,
+  pregasynforte: pregasynForteImage,
+  pregasyn: pregasynImage,
 };
 
 const normalizeProduct = (product) => {
-  const name = product.name?.trim();
+  const name = String(product.name || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+
+  let imageKey = "";
+
+  if (name.includes("neurosyn")) {
+    imageKey = "neurosyn";
+  } else if (name.includes("pantosyn")) {
+    imageKey = "pantosyn";
+  } else if (name.includes("trypsyn")) {
+    imageKey = "trypsyn";
+  } else if (name.includes("cefixa")) {
+    imageKey = "cefixa";
+  } else if (name.includes("betasyn")) {
+    imageKey = "betasyn";
+  } else if (name.includes("pregasyn")) {
+    imageKey = name.includes("forte")
+      ? "pregasynforte"
+      : "pregasyn";
+  }
 
   return {
     ...product,
-    image: localProductImages[name] || product.image || "",
+    image: localProductImages[imageKey] || product.image || "",
   };
 };
+
+// Convert Django text/JSON fields into arrays
+const parseList = (value) => {
+  if (Array.isArray(value)) return value;
+
+  if (typeof value !== "string" || !value.trim()) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(value);
+    if (Array.isArray(parsed)) return parsed;
+  } catch {
+    // Treat non-JSON content as newline-separated text
+  }
+
+  return value
+    .split(/\r?\n/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+};
+
 const ProductsSection = () => {
   const [products, setProducts] = useState(fallbackProducts);
   const [selectedProduct, setSelectedProduct] = useState(null);
-  const [showPaymentOptions, setShowPaymentOptions] = useState(false);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("");
-  const [showDeliveryPopup, setShowDeliveryPopup] = useState(false);
+
+  const [showPaymentOptions, setShowPaymentOptions] =
+    useState(false);
+
+  const [selectedPaymentMethod, setSelectedPaymentMethod] =
+    useState("");
+
+  const [showDeliveryPopup, setShowDeliveryPopup] =
+    useState(false);
 
   const dialogRef = useRef(null);
 
-  // Fetch active products from Django Admin.
+  // Load products from Django
   useEffect(() => {
     let cancelled = false;
 
-    getProducts()
-      .then((data) => {
-        if (!cancelled && Array.isArray(data)) {
-          setProducts(data);
+    const loadProducts = async () => {
+      try {
+        const data = await getProducts();
+
+        const productList = Array.isArray(data)
+          ? data
+          : Array.isArray(data?.results)
+          ? data.results
+          : [];
+
+        const updatedProducts =
+          productList.map(normalizeProduct);
+
+        if (!cancelled) {
+          setProducts(updatedProducts);
         }
-      })
-      .catch((error) => {
-        console.error("Error loading Django products:", error);
-      });
+      } catch (error) {
+        console.error(
+          "Error loading Django products:",
+          error
+        );
+
+        if (!cancelled) {
+          setProducts(fallbackProducts);
+        }
+      }
+    };
+
+    loadProducts();
 
     return () => {
       cancelled = true;
     };
   }, []);
 
-  // Open or close product details dialog.
+  // Control product dialog
   useEffect(() => {
     const dialog = dialogRef.current;
+
     if (!dialog) return;
 
     if (selectedProduct && !dialog.open) {
@@ -154,6 +226,43 @@ const ProductsSection = () => {
     setShowDeliveryPopup(false);
   };
 
+  const getCategory = (product) => {
+    if (typeof product.category === "string") {
+      return product.category;
+    }
+
+    return (
+      product.category?.name ||
+      "Pharmaceutical Products"
+    );
+  };
+
+  const indications = selectedProduct
+    ? parseList(selectedProduct.indications)
+    : [];
+
+  const rawActives = selectedProduct
+    ? parseList(selectedProduct.actives)
+    : [];
+
+  const actives = rawActives.map((active) => {
+    if (
+      active &&
+      typeof active === "object" &&
+      !Array.isArray(active)
+    ) {
+      return {
+        amount: active.amount || "",
+        name: active.name || "",
+      };
+    }
+
+    return {
+      amount: "",
+      name: String(active),
+    };
+  });
+
   return (
     <section
       id="products"
@@ -161,16 +270,22 @@ const ProductsSection = () => {
       aria-labelledby="products-title"
     >
       <header className="products-heading">
-        <p className="products-eyebrow">Our Portfolio</p>
+        <p className="products-eyebrow">
+          Our Portfolio
+        </p>
 
-        <h2 id="products-title">Our Pharmaceutical Products</h2>
+        <h2 id="products-title">
+          Our Pharmaceutical Products
+        </h2>
 
         <p className="products-intro">
-          Explore our range of pharmaceutical formulations developed to
-          support diverse healthcare needs.
+          Explore our range of pharmaceutical
+          formulations developed to support diverse
+          healthcare needs.
         </p>
       </header>
 
+      {/* PRODUCT CARDS */}
       <div className="products-grid">
         {products.map((product) => (
           <article
@@ -182,6 +297,12 @@ const ProductsSection = () => {
                 className="product-image"
                 src={product.image}
                 alt={product.name}
+                onError={(event) => {
+                  console.error(
+                    "Product image failed:",
+                    event.currentTarget.src
+                  );
+                }}
               />
             ) : (
               <div
@@ -192,7 +313,7 @@ const ProductsSection = () => {
 
             <div className="product-details">
               <span className="product-category">
-                {product.category || "Pharmaceutical Products"}
+                {getCategory(product)}
               </span>
 
               <h3>{product.name}</h3>
@@ -210,7 +331,8 @@ const ProductsSection = () => {
                 onClick={() => openProduct(product)}
                 aria-label={`View details for ${product.name}`}
               >
-                View Product <span aria-hidden="true">→</span>
+                View Product{" "}
+                <span aria-hidden="true">→</span>
               </button>
             </div>
           </article>
@@ -223,6 +345,7 @@ const ProductsSection = () => {
         </p>
       )}
 
+      {/* PRODUCT DETAILS POPUP */}
       <dialog
         className="product-dialog"
         ref={dialogRef}
@@ -240,11 +363,12 @@ const ProductsSection = () => {
             <header className="product-dialog-header">
               <div className="product-dialog-badges">
                 <span className="product-dialog-category">
-                  {selectedProduct.category}
+                  {getCategory(selectedProduct)}
                 </span>
 
                 <span className="product-dialog-prescription">
                   {selectedProduct.prescriptionLabel ||
+                    selectedProduct.prescription_label ||
                     "Product Information"}
                 </span>
               </div>
@@ -255,7 +379,10 @@ const ProductsSection = () => {
                 onClick={closeDialog}
                 aria-label="Close product details"
               >
-                <svg viewBox="0 0 24 24" aria-hidden="true">
+                <svg
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
                   <circle cx="12" cy="12" r="9" />
                   <path d="m9 9 6 6m0-6-6 6" />
                 </svg>
@@ -269,13 +396,17 @@ const ProductsSection = () => {
             </header>
 
             {showPaymentOptions ? (
+              /* PAYMENT OPTIONS */
               <div className="product-dialog-body product-payment-body">
                 <button
                   className="product-payment-back"
                   type="button"
-                  onClick={() => setShowPaymentOptions(false)}
+                  onClick={() =>
+                    setShowPaymentOptions(false)
+                  }
                 >
-                  <span aria-hidden="true">←</span> Back to product
+                  <span aria-hidden="true">←</span>{" "}
+                  Back to product
                 </button>
 
                 <section className="product-payment-options">
@@ -294,18 +425,20 @@ const ProductsSection = () => {
                       ["cod", "Cash on Delivery"],
                     ].map(([value, label]) => (
                       <label
+                        key={value}
                         className={`product-payment-method${
                           selectedPaymentMethod === value
                             ? " is-selected"
                             : ""
                         }`}
-                        key={value}
                       >
                         <input
                           type="radio"
                           name="paymentMethod"
                           value={value}
-                          checked={selectedPaymentMethod === value}
+                          checked={
+                            selectedPaymentMethod === value
+                          }
                           onChange={() => {
                             setSelectedPaymentMethod(value);
                             setShowDeliveryPopup(false);
@@ -317,22 +450,28 @@ const ProductsSection = () => {
                     ))}
                   </div>
 
-                  <p className="product-payment-note" role="status">
-                    Payment checkout is not configured yet. No payment
-                    will be collected.
+                  <p
+                    className="product-payment-note"
+                    role="status"
+                  >
+                    Payment checkout is not configured yet.
+                    No payment will be collected.
                   </p>
 
                   <button
                     className="product-payment-ok"
                     type="button"
                     disabled={!selectedPaymentMethod}
-                    onClick={() => setShowDeliveryPopup(true)}
+                    onClick={() =>
+                      setShowDeliveryPopup(true)
+                    }
                   >
                     OK
                   </button>
                 </section>
               </div>
             ) : (
+              /* PRODUCT INFORMATION */
               <div className="product-dialog-body">
                 <div className="product-dialog-overview">
                   <div className="product-dialog-image-wrap">
@@ -349,6 +488,7 @@ const ProductsSection = () => {
                       <dt>Form &amp; Pack</dt>
                       <dd>
                         {selectedProduct.formAndPack ||
+                          selectedProduct.form_and_pack ||
                           "See product packaging"}
                       </dd>
                     </div>
@@ -357,8 +497,8 @@ const ProductsSection = () => {
                       <dt>Indication Segment</dt>
                       <dd>
                         {selectedProduct.indicationSegment ||
-                          selectedProduct.category ||
-                          "See product information"}
+                          selectedProduct.indication_segment ||
+                          getCategory(selectedProduct)}
                       </dd>
                     </div>
 
@@ -366,6 +506,7 @@ const ProductsSection = () => {
                       <dt>Shelf Life &amp; Storage</dt>
                       <dd>
                         {selectedProduct.shelfLife ||
+                          selectedProduct.shelf_life ||
                           "See product packaging"}
                       </dd>
                     </div>
@@ -380,30 +521,34 @@ const ProductsSection = () => {
                   </dl>
                 </div>
 
+                {/* THERAPEUTIC INDICATIONS */}
                 <section className="product-dialog-block">
                   <h3>Key Therapeutic Indications</h3>
 
                   <ul className="product-dialog-indications">
                     {(
-                      selectedProduct.indications || [
-                        "Refer to product information for approved indications",
-                      ]
-                    ).map((indication) => (
+                      indications.length > 0
+                        ? indications
+                        : [
+                            "Refer to product information for approved indications",
+                          ]
+                    ).map((indication, index) => (
                       <li
+                        key={index}
                         className={
-                          selectedProduct.indications
+                          indications.length > 0
                             ? ""
                             : "product-dialog-indication-placeholder"
                         }
-                        key={indication}
                       >
                         <span aria-hidden="true">▧</span>
-                        {indication}
+                        {String(indication)}
                       </li>
                     ))}
                   </ul>
                 </section>
 
+                {/* ACTIVE INGREDIENTS */}
                 <section className="product-dialog-block product-dialog-actives-block">
                   <div className="product-dialog-block-heading">
                     <h3>Key Active Ingredients</h3>
@@ -412,22 +557,24 @@ const ProductsSection = () => {
 
                   <ul className="product-dialog-actives">
                     {(
-                      selectedProduct.actives || [
-                        {
-                          amount: "Composition",
-                          name:
-                            selectedProduct.description ||
-                            "Refer to product information",
-                        },
-                      ]
-                    ).map((active) => (
+                      actives.length > 0
+                        ? actives
+                        : [
+                            {
+                              amount: "Composition",
+                              name:
+                                selectedProduct.description ||
+                                "Refer to product information",
+                            },
+                          ]
+                    ).map((active, index) => (
                       <li
+                        key={index}
                         className={
-                          selectedProduct.actives
+                          actives.length > 0
                             ? ""
                             : "product-dialog-active-placeholder"
                         }
-                        key={`${active.amount}-${active.name}`}
                       >
                         {active.amount && (
                           <strong>{active.amount}</strong>
@@ -442,20 +589,26 @@ const ProductsSection = () => {
                 <button
                   className="product-dialog-buy"
                   type="button"
-                  onClick={() => setShowPaymentOptions(true)}
+                  onClick={() =>
+                    setShowPaymentOptions(true)
+                  }
                 >
-                  Buy Now <span aria-hidden="true">→</span>
+                  Buy Now{" "}
+                  <span aria-hidden="true">→</span>
                 </button>
               </div>
             )}
           </>
         )}
 
+        {/* DELIVERY DEMONSTRATION POPUP */}
         {showDeliveryPopup && selectedProduct && (
           <div
             className="product-delivery-overlay"
             onClick={(event) => {
-              if (event.target === event.currentTarget) {
+              if (
+                event.target === event.currentTarget
+              ) {
                 setShowDeliveryPopup(false);
               }
             }}
@@ -479,21 +632,24 @@ const ProductsSection = () => {
               </h3>
 
               <p id="product-delivery-description">
-                This is a demonstration. No order has been placed.
+                This is a demonstration.
+                No order has been placed.
               </p>
 
               <p
                 className="product-delivery-note"
                 id="product-delivery-note"
               >
-                No payment has been processed and no delivery has
-                been scheduled.
+                No payment has been processed and no
+                delivery has been scheduled.
               </p>
 
               <button
                 className="product-delivery-close"
                 type="button"
-                onClick={() => setShowDeliveryPopup(false)}
+                onClick={() =>
+                  setShowDeliveryPopup(false)
+                }
               >
                 OK
               </button>
